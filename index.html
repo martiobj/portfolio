@@ -1,0 +1,2223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Martí Vera Marsal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,700;0,800;0,900;1,300;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --hdr: 44px;
+      --bg: #ffffff;
+      --ink: #1A1714;
+      --mid: #8A8178;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --reveal: 0;
+      --slab-max: 96px;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Montserrat', sans-serif;
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      height: var(--hdr);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2.5rem;
+      border-bottom: 1px solid rgba(0,0,0,0.07);
+    }
+
+    .hdr-name {
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    nav { display: flex; gap: 2rem; }
+
+    nav a {
+      font-size: 0.58rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+      opacity: 0.38;
+      transition: opacity 0.2s;
+    }
+
+    nav a:hover { opacity: 1; }
+
+    /* ── PAGE ── */
+    .page {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* White field — name pressed to the bottom of the space, just above the strip */
+    .identity {
+      flex: 0 0 auto;
+      height: calc(57vh - var(--hdr));
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      text-align: center;
+      padding: 0 2.5rem 2rem;
+    }
+
+    .identity-name {
+      font-family: 'Montserrat', sans-serif;
+      font-size: clamp(1.6rem, 3vw, 3rem);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+      margin-bottom: 0.65rem;
+    }
+
+    .identity-name em { font-style: italic; }
+
+    .identity-name a {
+      color: inherit;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .identity-name a:hover { opacity: 0.55; }
+
+    .identity-sub {
+      font-size: 0.56rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+    }
+
+    /* Architecture / Barcelona / Los Angeles always stay fully visible —
+       only "Research" itself reacts to dwell, its color/opacity interpolated
+       per frame in JS (see the dwell-reveal script near the end of the
+       file). The transition here still serves the per-project hover
+       emphasis further down. */
+    .sub-word[data-role="other"],
+    .sub-sep {
+      transition: opacity 0.25s var(--ease), color 0.25s var(--ease);
+    }
+
+    .sub-word[data-role="research"] {
+      position: relative;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    /* Hovering a project echoes the same "word darkens and becomes present"
+       language the Research reveal uses, but for the words that belong to
+       that project — a hint that the subtitle isn't just decoration.
+       Scoped to .page (not .strip): the subtitle lives in a sibling
+       (.identity), so the :has() has to sit on their common ancestor to
+       reach across. */
+    .page:has(.seg-fires:hover) .sub-word[data-word="architecture"],
+    .page:has(.seg-fires:hover) .sub-word[data-word="losangeles"],
+    .page:has(.seg-casa:hover) .sub-word[data-word="architecture"],
+    .page:has(.seg-casa:hover) .sub-word[data-word="barcelona"],
+    .page:has(.seg-cantera:hover) .sub-word[data-word="architecture"],
+    .page:has(.seg-cantera:hover) .sub-word[data-word="barcelona"],
+    .page:has(.seg-m3:hover) .sub-word[data-word="architecture"],
+    .page:has(.seg-m3:hover) .sub-word[data-word="barcelona"] {
+      opacity: 1;
+      color: var(--ink);
+    }
+
+    /* The words that DON'T belong to the hovered project fall under
+       transparency too, so the emphasis above actually reads as emphasis —
+       this overrides the ambient dwell fade rather than adding to it. */
+    .page:has(.seg-fires:hover) .sub-word[data-word="barcelona"],
+    .page:has(.seg-casa:hover) .sub-word[data-word="losangeles"],
+    .page:has(.seg-cantera:hover) .sub-word[data-word="losangeles"],
+    .page:has(.seg-m3:hover) .sub-word[data-word="losangeles"] {
+      opacity: 0.1;
+    }
+
+    .research-cue {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 3px;
+      font-size: 0.6rem;
+      color: var(--ink);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ── THE BASEMENT SLAB ──
+       The "ground" beneath the strip. Rises from the bottom on dwell;
+       clicking it (or the "Research" word above) opens the research view.
+    ── */
+    .basement-slab {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 5;
+      height: calc(var(--reveal) * var(--slab-max));
+      background: var(--ink);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .basement-label {
+      font-size: 0.5rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #EDE7DB;
+      white-space: nowrap;
+      text-align: center;
+      padding: 0 1rem;
+      opacity: 0; /* driven by JS past --reveal ~0.55 */
+    }
+
+    /* ── THE STRIP ──
+       Single thin band, like the portfolio cover.
+       Expands when a segment is hovered.
+    ── */
+    .strip {
+      flex-shrink: 0;
+      display: flex;
+      height: 80px;
+      transition: height 0.8s var(--ease);
+    }
+
+    .strip:has(.seg:hover) { height: 38vh; }
+
+    .seg {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      border-right: 1px solid rgba(255,255,255,0.14);
+      transition: flex 0.8s var(--ease);
+    }
+
+    .seg:last-child { border-right: none; }
+
+    .strip:has(.seg:hover) .seg       { flex: 0.8; }
+    .strip:has(.seg:hover) .seg:hover { flex: 1.6; }
+
+    /* ── Strip backgrounds — main photo per project ──
+       Sized against a fixed viewport-relative box (never against the
+       segment's own flexing width/height) so growing the segment on hover
+       only reveals more of the same backdrop — the photo itself never
+       scales/zooms. */
+    .seg-bg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 40vw;
+      height: 38vh;
+      transform: translate(-50%, -50%);
+      background-size: cover;
+      background-position: center;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .seg-fires .seg-bg {
+      background-image: url('After the Fires/imatges/main.png');
+    }
+    .seg-casa .seg-bg {
+      background-color: #0a0a0a;
+      background-image: url('LACasa/imatges/main.png');
+    }
+    .seg-cantera .seg-bg {
+      background-color: #DCE8EE;
+      background-image: url('LACantera/imatges/main.png');
+    }
+    .seg-m3 .seg-bg {
+      background-image: url('m3/imatges/main.png');
+      background-position: center 20%;
+    }
+
+    /* Legibility overlay */
+    .seg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: rgba(0,0,0,0);
+      transition: background 0.8s var(--ease);
+    }
+
+    .strip:has(.seg:hover) .seg-fires:hover::before    { background: rgba(0,0,0,0.18); }
+    .strip:has(.seg:hover) .seg-m3:hover::before       { background: rgba(0,0,0,0.4); }
+    .strip:has(.seg:hover) .seg-casa:hover::before     { background: rgba(0,0,0,0.48); }
+    .strip:has(.seg:hover) .seg-cantera:hover::before  { background: rgba(0,0,0,0.46); }
+    .strip:has(.seg:hover) .seg:not(:hover)::before    { background: rgba(0,0,0,0.2);  }
+
+    /* Segment content */
+    .seg-inner {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 0 1.5rem 1.5rem;
+      pointer-events: none;
+    }
+
+    .seg-num {
+      position: absolute;
+      top: 0.85rem;
+      left: 1.5rem;
+      font-size: 0.48rem;
+      letter-spacing: 0.2em;
+      color: rgba(225,215,198,0.38);
+      transition: color 0.5s;
+    }
+
+    .strip:has(.seg:hover) .seg:hover .seg-num { color: rgba(225,215,198,0.72); }
+
+    .seg-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: clamp(1.1rem, 2.2vw, 2rem);
+      font-weight: 300;
+      font-style: italic;
+      line-height: 1.18;
+      color: #EDE7DB;
+      margin-bottom: 0.4rem;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.45s var(--ease) 0.22s,
+                  transform 0.55s var(--ease) 0.22s;
+    }
+
+    .seg-title strong { font-style: normal; font-weight: 400; }
+
+    .seg-tag {
+      font-size: 0.48rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(220,210,190,0.65);
+      margin-bottom: 1.1rem;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.38s var(--ease) 0.3s,
+                  transform 0.48s var(--ease) 0.3s;
+    }
+
+    .seg-cta {
+      display: inline-block;
+      width: fit-content;
+      font-size: 0.52rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #EDE7DB;
+      border-bottom: 1px solid rgba(220,210,190,0.5);
+      padding-bottom: 2px;
+      opacity: 0;
+      pointer-events: none;
+      cursor: pointer;
+      transition: opacity 0.32s var(--ease) 0.36s;
+    }
+
+    .strip:has(.seg:hover) .seg:hover .seg-title { opacity: 1; transform: translateY(0); }
+    .strip:has(.seg:hover) .seg:hover .seg-tag   { opacity: 1; transform: translateY(0); }
+    .strip:has(.seg:hover) .seg:hover .seg-cta   { opacity: 1; pointer-events: all; }
+
+    /* ── Touch/no-hover devices only: a tap can't ":hover", so the reveal
+       above is mirrored onto a JS-toggled .seg-active class instead — see
+       the tap-to-preview / tap-to-enter handler at the bottom of the file.
+       Left untouched on anything that has real hover (desktop, trackpad). ── */
+    @media (hover: none) and (pointer: coarse) {
+      .strip:has(.seg.seg-active) { height: 38vh; }
+      .strip:has(.seg.seg-active) .seg              { flex: 0.8; }
+      .strip:has(.seg.seg-active) .seg.seg-active   { flex: 1.6; }
+
+      .strip:has(.seg.seg-active) .seg-fires.seg-active::before    { background: rgba(0,0,0,0.18); }
+      .strip:has(.seg.seg-active) .seg-m3.seg-active::before       { background: rgba(0,0,0,0.4); }
+      .strip:has(.seg.seg-active) .seg-casa.seg-active::before     { background: rgba(0,0,0,0.48); }
+      .strip:has(.seg.seg-active) .seg-cantera.seg-active::before  { background: rgba(0,0,0,0.46); }
+      .strip:has(.seg.seg-active) .seg:not(.seg-active)::before    { background: rgba(0,0,0,0.2); }
+
+      .strip:has(.seg.seg-active) .seg.seg-active .seg-num { color: rgba(225,215,198,0.72); }
+      .seg.seg-active .seg-title { opacity: 1; transform: translateY(0); }
+      .seg.seg-active .seg-tag   { opacity: 1; transform: translateY(0); }
+      .seg.seg-active .seg-cta   { opacity: 1; pointer-events: all; }
+    }
+
+    /* ── BOTTOM BAR ── */
+    .bottom {
+      flex-shrink: 0;
+      margin-top: auto;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      padding: 0 2.5rem;
+      border-top: 1px solid rgba(0,0,0,0.07);
+    }
+
+    .bottom span {
+      font-size: 0.5rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+      opacity: 0.55;
+    }
+
+    /* ── PROJECT VIEWS ──
+       Full-screen scrollable overlay, one per project.
+       Opens when strip segment is clicked.
+    ── */
+    .proj-view {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: #ffffff;
+      overflow-y: auto;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.38s var(--ease);
+    }
+
+    .proj-view.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .pc-block {
+      scroll-margin-top: calc(var(--hdr) + 12px);
+    }
+
+    /* Sticky top bar inside the project view */
+    .proj-bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #ffffff;
+      border-bottom: 1px solid rgba(0,0,0,0.07);
+      height: var(--hdr);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2.5rem;
+    }
+
+    .proj-back {
+      background: none;
+      border: none;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.58rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink);
+      opacity: 0.38;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .proj-back:hover { opacity: 1; }
+
+    .proj-bar-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.56rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink);
+      opacity: 0.55;
+    }
+
+    .proj-dl {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.56rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+      opacity: 0.38;
+      transition: opacity 0.2s;
+      border-bottom: 1px solid rgba(26,23,20,0.25);
+      padding-bottom: 1px;
+    }
+
+    .proj-dl:hover { opacity: 1; }
+
+    /* Scrollable image column */
+    .proj-pages {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .proj-pages img {
+      width: 100%;
+      display: block;
+      /* No gap — pages are flush, matching the PDF reading experience */
+    }
+
+    /* ── ABOUT OVERLAY ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 5rem 3rem 3rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.42s var(--ease);
+      overflow-y: auto;
+    }
+
+    .overlay.open { opacity: 1; pointer-events: all; }
+
+    .overlay-close {
+      position: absolute;
+      top: 1rem; right: 2.5rem;
+      background: none; border: none;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.56rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink);
+      opacity: 0.38;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .overlay-close:hover { opacity: 1; }
+
+    .overlay-bio {
+      font-family: 'EB Garamond', serif;
+      font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+      font-weight: 300;
+      line-height: 1.75;
+      color: var(--ink);
+      max-width: 44rem;
+      margin: 0 auto 3.5rem;
+      text-align: justify;
+    }
+
+    .overlay-bio p { margin-bottom: 1.1em; }
+    .overlay-bio p:last-child { margin-bottom: 0; text-align: right; }
+
+    .contact-row { display: flex; gap: 3rem; flex-wrap: wrap; }
+
+    .contact-item { display: flex; flex-direction: column; gap: 0.45rem; }
+
+    .contact-label {
+      font-size: 0.5rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--mid);
+    }
+
+    .contact-link {
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(26,23,20,0.38);
+      padding-bottom: 1px;
+      width: fit-content;
+      transition: opacity 0.2s;
+    }
+
+    .contact-link:hover { opacity: 0.4; }
+
+    /* ── PROJECT CONTENT (pc-*) ── */
+    .pc-block { margin-bottom: 0.5rem; }
+
+    .pc-label {
+      display: block;
+      font-size: 0.58rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink);
+      margin-bottom: 1.2rem;
+    }
+
+    .pc-sub {
+      display: block;
+      font-size: 0.54rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink);
+      opacity: 0.5;
+      margin-bottom: 1.8rem;
+    }
+
+    .pc-title {
+      font-size: clamp(1.8rem, 3vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+      color: var(--ink);
+      margin-bottom: 1.8rem;
+      text-align: center;
+    }
+
+    .pc-title em { font-weight: 300; font-style: italic; }
+
+    .pc-body {
+      font-family: 'EB Garamond', serif;
+      font-size: 0.92rem;
+      line-height: 1.75;
+      color: var(--ink);
+      opacity: 0.7;
+      width: 100%;
+      text-align: justify;
+      margin-bottom: 1.2rem;
+    }
+
+    /* ── Cover intro screen ── */
+    .pc-cover {
+      min-height: calc(100vh - var(--hdr));
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem 0 3rem;
+      position: relative;
+    }
+
+    .pc-cover .pc-label,
+    .pc-cover .pc-title,
+    .pc-cover .pc-body,
+    .pc-cover .pc-credits { width: 100%; }
+
+    .pc-cover .pc-label,
+    .pc-cover .pc-credits { text-align: center; }
+
+    .pc-cover .pc-body { text-align: justify; }
+
+    .pc-cover .pc-tags { justify-content: center; }
+
+    .pc-scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.44rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      opacity: 0.45;
+    }
+
+
+    .pc-credits {
+      font-size: 0.5rem;
+      letter-spacing: 0.1em;
+      color: var(--mid);
+      margin-bottom: 1.4rem;
+    }
+
+    .pc-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    .pc-tag {
+      font-size: 0.44rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--mid);
+      border: 1px solid rgba(138,129,120,0.38);
+      padding: 0.25rem 0.55rem;
+    }
+
+    .pc-hr {
+      border: none;
+      border-top: 1px solid rgba(26,23,20,0.08);
+      margin: 3.5rem 0;
+    }
+
+    .pc-img-full { width: 100%; display: block; }
+
+    .pc-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin-top: 1.2rem;
+    }
+
+    .pc-grid-2 img { width: 100%; display: block; }
+
+    .pc-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0;
+      margin-top: 1.2rem;
+    }
+
+    .pc-grid-3 img { width: 100%; display: block; }
+
+    .pc-caption {
+      font-size: 0.43rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--mid);
+      opacity: 0.65;
+      margin-top: 0.5rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .pc-time-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 2rem;
+      margin: 2rem 0 2.5rem;
+    }
+
+    .pc-time-label {
+      display: block;
+      font-size: 0.5rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 0.6rem;
+    }
+
+    .pc-time-text {
+      font-size: 0.6rem;
+      line-height: 1.7;
+      color: var(--ink);
+      opacity: 0.65;
+    }
+
+    .pc-video-wrap {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%;
+      height: 0;
+    }
+
+    .pc-video-wrap iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: none;
+    }
+
+    /* ── LIGHTBOX ── */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: rgba(0,0,0,0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s var(--ease);
+      cursor: zoom-out;
+    }
+
+    .lightbox.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .lightbox img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transform: scale(0.96);
+      transition: transform 0.3s var(--ease);
+    }
+
+    .lightbox.open img {
+      transform: scale(1);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 1.2rem;
+      right: 2rem;
+      font-size: 0.52rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .lightbox-close:hover { color: #fff; }
+
+    .lightbox-counter {
+      position: absolute;
+      top: 1.3rem;
+      left: 2rem;
+      font-size: 0.5rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .lightbox-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.45);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 300;
+      line-height: 1;
+      padding: 0.6rem 0.9rem;
+      cursor: pointer;
+      transition: color 0.2s;
+      z-index: 2;
+    }
+
+    .lightbox-arrow:hover { color: #fff; }
+    .lightbox-prev { left: 0.25rem; }
+    .lightbox-next { right: 0.25rem; }
+
+    /* ── PROJECT PROGRESS RAIL ── */
+    .proj-rail {
+      position: fixed;
+      left: 28px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 320;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s var(--ease);
+    }
+
+    .proj-rail.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .proj-rail-mark {
+      position: relative;
+      width: 8px;
+      height: 8px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: rgba(26,23,20,0.2);
+      cursor: pointer;
+      transition: background 0.25s var(--ease), transform 0.25s var(--ease);
+    }
+
+    .proj-rail-mark:hover { background: rgba(26,23,20,0.45); }
+
+    .proj-rail-mark.active {
+      background: var(--ink);
+      transform: scale(1.7);
+    }
+
+    .proj-rail.dark .proj-rail-mark { background: rgba(237,231,219,0.28); }
+    .proj-rail.dark .proj-rail-mark:hover { background: rgba(237,231,219,0.55); }
+    .proj-rail.dark .proj-rail-mark.active { background: #EDE7DB; }
+
+    /* Two-level rail (research page): big "part" dots, small "sub" dots,
+       each with a label that appears on hover/focus. */
+    .proj-rail-mark.part { width: 11px; height: 11px; margin-top: 12px; }
+    .proj-rail-mark.part:first-child { margin-top: 0; }
+    .proj-rail-mark.sub { width: 6px; height: 6px; opacity: 0.7; }
+
+    .rail-label {
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%) translateX(-4px);
+      white-space: nowrap;
+      font-size: 0.5rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: rgba(255,255,255,0.9);
+      padding: 2px 6px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
+    }
+
+    .proj-rail-mark:hover .rail-label,
+    .proj-rail-mark:focus-visible .rail-label { opacity: 1; transform: translateY(-50%) translateX(0); }
+
+    .proj-rail-mark.part .rail-label { font-weight: 700; }
+
+    .pc-img-full,
+    .pc-grid-2 img {
+      cursor: zoom-in;
+      transition: opacity 0.2s;
+    }
+
+    .pc-img-full:hover,
+    .pc-grid-2 img:hover { opacity: 0.88; }
+
+    /* ── FIRES: dark reading mode, matches the portfolio's black pages ── */
+    #view-fires { background: #000; }
+    #view-fires .proj-bar { background: #000; border-bottom-color: rgba(255,255,255,0.08); }
+    #view-fires .proj-back,
+    #view-fires .proj-bar-title { color: #EDE7DB; opacity: 0.55; }
+    #view-fires .proj-back:hover { opacity: 1; }
+    #view-fires .proj-dl { color: #EDE7DB; opacity: 0.5; border-bottom-color: rgba(237,231,219,0.35); }
+    #view-fires .proj-dl:hover { opacity: 1; }
+    #view-fires .pc-label,
+    #view-fires .pc-title { color: #EDE7DB; }
+    #view-fires .pc-sub { color: rgba(237,231,219,0.6); }
+    #view-fires .pc-body { color: rgba(237,231,219,0.75); }
+    #view-fires .pc-credits { color: rgba(237,231,219,0.5); }
+    #view-fires .pc-tag { color: rgba(237,231,219,0.65); border-color: rgba(237,231,219,0.32); }
+    #view-fires .pc-caption { color: rgba(237,231,219,0.55); }
+    #view-fires .pc-hr { border-top-color: rgba(255,255,255,0.1); }
+    #view-fires .pc-scroll-hint { color: rgba(237,231,219,0.45); }
+
+    /* ── RESEARCH VIEW ──
+       Same white/ink language as the project views, but it rises from the
+       bottom (the "ground" coming up) instead of fading in.
+    ── */
+    #view-research {
+      opacity: 1;
+      transform: translateY(100%);
+      transition: transform 0.9s cubic-bezier(0.22, 0.68, 0, 1);
+    }
+
+    #view-research.open {
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    #view-research .proj-bar { justify-content: flex-start; }
+
+    #view-research .proj-bar-title {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .research-sub {
+      width: 100%;
+      max-width: 56ch;
+      margin: 0 auto;
+      font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+      font-style: italic;
+      line-height: 1.6;
+      color: var(--mid);
+    }
+
+    .research-group-label {
+      display: block;
+      font-size: 0.5rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 0.6rem;
+    }
+
+    /* Surreal Frame / Background: collapsed to just their cover statement
+       until "Show More" is clicked — the images stay out of the DOM flow
+       (display:none) rather than animating, since their combined height is
+       both large and unpredictable. */
+    .research-part-title { cursor: pointer; }
+
+    .research-toggle {
+      display: inline-block;
+      margin-top: 1.3rem;
+      background: none;
+      border: none;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.52rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink);
+      border-bottom: 1px solid rgba(26,23,20,0.35);
+      padding-bottom: 2px;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+
+    .research-toggle:hover { opacity: 1; }
+
+    /* Finder-style disclosure: the cover never moves or resizes — the
+       content beneath it slides open in place, like expanding a folder's
+       arrow without navigating into it. grid-template-rows 0fr → 1fr
+       animates a height nobody has to pre-measure. */
+    .research-expand {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.6s var(--ease);
+    }
+    .research-expand.open { grid-template-rows: 1fr; }
+
+    .research-expand-inner { overflow: hidden; min-height: 0; }
+
+    /* Background renders: flush against each other, no gutter */
+    .research-render-grid { column-gap: 0; row-gap: 0.9rem; margin-bottom: 1.8rem; }
+
+    /* One caption per row, spanning both images in that row */
+    .research-render-caption {
+      grid-column: 1 / -1;
+      margin-top: -0.3rem;
+      margin-bottom: 0;
+    }
+
+    .research-entry-outbound {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    /* The six case-study grounds are transcribed as short observational
+       lines, one thought per line — left-aligned, not justified, so the
+       line breaks read as intentional rather than as ragged prose. */
+    .research-observation {
+      font-size: 0.68rem;
+      line-height: 1.95;
+      color: var(--ink);
+      opacity: 0.72;
+      max-width: 62ch;
+      text-align: left;
+      margin-bottom: 1.2rem;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 600px) {
+      header, .identity, .bottom { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .identity-name { font-size: 2.2rem; }
+      /* Shorter identity block + reserved bottom clearance: on smaller
+         phones the strip and footer used to sit close enough to the
+         viewport bottom that the basement slab (up to --slab-max tall)
+         could rise up over them. Shrinking .identity pulls the whole
+         identity/strip block up, and padding .page by --slab-max keeps
+         that much empty space above the footer at all times, so the fully
+         risen slab only ever covers that reserved gap. */
+      .identity { height: calc(50vh - var(--hdr)); }
+      .page { padding-bottom: var(--slab-max); }
+      .strip { height: 60px; }
+      .strip:has(.seg:hover) { height: 34vh; }
+      .seg-bg { height: 34vh; }
+      .seg-inner { padding: 0 1rem 1.1rem; }
+      .proj-bar { padding: 0 1.25rem; }
+      .proj-bar-title { display: none; }
+      .proj-pages { padding: 1.5rem 0.75rem 3rem; }
+      .pc-grid-2,
+      .pc-grid-3,
+      .pc-time-grid { grid-template-columns: 1fr; }
+      .proj-rail { display: none; }
+      .lightbox-arrow { font-size: 1.7rem; padding: 0.4rem 0.5rem; }
+    }
+
+    /* ── Phone only: the strip is already at its expanded height ──
+       On an actual touch phone the strip doesn't grow taller when a
+       segment is tapped — there's no mouse to dwell with, so it starts at
+       that height already. Tapping a segment (see the tap-to-preview
+       handler) still does the accordion move exactly like desktop hover —
+       it widens within the row and the rest narrow — just without any
+       vertical growth beforehand. ── */
+    @media (hover: none) and (pointer: coarse) and (max-width: 600px) {
+      .strip,
+      .strip:has(.seg:hover),
+      .strip:has(.seg.seg-active) {
+        height: 34vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <a href="/" class="hdr-name">Architecture Portfolio</a>
+    <nav>
+      <a href="Portfolio_VeraMarsalMarti.pdf" target="_blank">Portfolio</a>
+      <a href="CV_VeraMarsalMarti.pdf" target="_blank">CV</a>
+      <a href="#" onclick="toggleAbout(event)">About</a>
+    </nav>
+  </header>
+
+  <!-- LANDING PAGE -->
+  <div class="page">
+
+    <div class="identity">
+      <h1 class="identity-name"><a href="#" onclick="toggleAbout(event)">Martí Vera Marsal</a></h1>
+      <p class="identity-sub"><span class="sub-word" data-role="other" data-word="architecture">Architecture</span><span class="sub-sep">&nbsp;·&nbsp;</span><span class="sub-word" data-role="research" data-word="research" id="researchWord" role="button" tabindex="0" onclick="navigateToView('view-research')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateToView('view-research');}">Research<span class="research-cue" id="researchCue">↓</span></span><span class="sub-sep">&nbsp;·&nbsp;</span><span class="sub-word" data-role="other" data-word="barcelona">Barcelona</span><span class="sub-sep">&nbsp;·&nbsp;</span><span class="sub-word" data-role="other" data-word="losangeles">Los Angeles</span></p>
+    </div>
+
+    <div class="strip">
+
+      <div class="seg seg-fires" data-project="view-fires">
+        <div class="seg-bg"></div>
+        <div class="seg-inner">
+          <span class="seg-num">01</span>
+          <div class="seg-title">Architecture After the Fires:<br>
+            <strong>LA in Progress</strong></div>
+          <div class="seg-tag">2025 &nbsp;·&nbsp; Exhibition &nbsp;·&nbsp; Spatial Research</div>
+          <span class="seg-cta">
+            View Project →
+          </span>
+        </div>
+      </div>
+
+      <div class="seg seg-casa" data-project="view-casa">
+        <div class="seg-bg"></div>
+        <div class="seg-inner">
+          <span class="seg-num">02</span>
+          <div class="seg-title">LACasa per la teulada /<br>
+            <strong>The House Through the Roof</strong></div>
+          <div class="seg-tag">2024 &nbsp;·&nbsp; Inflatable Architecture</div>
+          <span class="seg-cta">
+            View Project →
+          </span>
+        </div>
+      </div>
+
+      <div class="seg seg-cantera" data-project="view-cantera">
+        <div class="seg-bg"></div>
+        <div class="seg-inner">
+          <span class="seg-num">03</span>
+          <div class="seg-title">LACantera /<br>
+            <strong>The Quarry</strong></div>
+          <div class="seg-tag">2024 &nbsp;·&nbsp; Landscape Architecture &nbsp;·&nbsp; Data Research</div>
+          <span class="seg-cta">
+            View Project →
+          </span>
+        </div>
+      </div>
+
+      <div class="seg seg-m3" data-project="view-m3">
+        <div class="seg-bg"></div>
+        <div class="seg-inner">
+          <span class="seg-num">04</span>
+          <div class="seg-title">m³ -<br>
+            <strong>Portable Architecture</strong></div>
+          <div class="seg-tag">2023 &nbsp;·&nbsp; Social Clothing &nbsp;·&nbsp; Wearable Space</div>
+          <span class="seg-cta">
+            View Project →
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom">
+      <span>© 2025</span>
+    </div>
+
+  </div>
+
+  <!-- BASEMENT SLAB — the ground, rising -->
+  <div class="basement-slab" id="basementSlab" onclick="navigateToView('view-research')">
+    <span class="basement-label" id="basementLabel">↓ Research &nbsp;·&nbsp; the ground the work stands on</span>
+  </div>
+
+  <!-- ── PROJECT VIEW: FIRES ── -->
+  <div class="proj-view" id="view-fires">
+    <div class="proj-bar">
+      <button class="proj-back" onclick="navigateBack()">← Back</button>
+      <span class="proj-bar-title">Architecture After the Fires</span>
+      <a class="proj-dl" href="Portfolio_VeraMarsalMarti.pdf#page=5" target="_blank">
+        Download PDF ↗
+      </a>
+    </div>
+    <div class="proj-pages">
+
+      <!-- Cover -->
+      <div class="pc-block pc-cover">
+        <span class="pc-label">2025 &nbsp;·&nbsp; Exhibition &nbsp;·&nbsp; Spatial Research</span>
+        <h2 class="pc-title">Architecture After the Fires: <em>LA in Progress</em></h2>
+        <p class="pc-body">This project explores the act of scanning as a spatial and perceptual operation rather than a purely technical one. Built from three-dimensional scans of houses destroyed by the Eaton Fire (Los Angeles, 2025), the project captures what remains after the event: collapsed walls, voids, warped geometries. Rendered as point clouds, these fragments suspend architecture between presence and absence, transforming destruction into a legible yet unstable landscape.</p>
+        <p class="pc-credits">Developed in Collaboration with Altadena Residents &nbsp;·&nbsp; Produced by SCI-Arc Resilient Futures Task Force &nbsp;·&nbsp; With Support from LACMA Art + Technology Lab</p>
+        <div class="pc-tags">
+          <span class="pc-tag">LiDAR</span>
+          <span class="pc-tag">Photogrammetry</span>
+          <span class="pc-tag">PolyCam</span>
+          <span class="pc-tag">RealityCapture</span>
+          <span class="pc-tag">Rhino 3D</span>
+          <span class="pc-tag">Photoshop</span>
+          <span class="pc-tag">Premiere Pro</span>
+        </div>
+        <span class="pc-scroll-hint">↓ scroll</span>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 01 House Scans -->
+      <div class="pc-block">
+        <span class="pc-label">01 &nbsp;—&nbsp; House Scans</span>
+        <span class="pc-sub">Scanned + Drawn Floorplan Superposition</span>
+        <img class="pc-img-full" src="After the Fires/imatges/2-1.png" alt="Aerial scan and floorplan superposition — house 01">
+        <p class="pc-caption">Aerial Scan &amp; Floorplan Superposition — House 01</p>
+        <img class="pc-img-full" src="After the Fires/imatges/3-1.png" alt="Aerial scan and floorplan superposition — house 02">
+        <p class="pc-caption">Aerial Scan &amp; Floorplan Superposition — House 02</p>
+        <img class="pc-img-full" src="After the Fires/imatges/4-1.png" alt="Aerial scan and floorplan superposition — house 03">
+        <p class="pc-caption">Aerial Scan &amp; Floorplan Superposition — House 03</p>
+        <img class="pc-img-full" src="After the Fires/imatges/4-2.png" alt="Aerial scan and floorplan superposition — house 04">
+        <p class="pc-caption">Aerial Scan &amp; Floorplan Superposition — House 04</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 02 Point Cloud Renders -->
+      <div class="pc-block">
+        <span class="pc-label">02 &nbsp;—&nbsp; Point Cloud Renders</span>
+        <img class="pc-img-full" src="After the Fires/imatges/5-1.png" alt="Point cloud renders — tree and chimney ruin detail">
+        <p class="pc-caption">Point Cloud Renders — Tree &amp; Chimney Ruin Detail</p>
+        <img class="pc-img-full" src="After the Fires/imatges/5-2.png" alt="Point cloud render — interior and exterior threshold">
+        <p class="pc-caption">Point Cloud Render — Interior / Exterior Threshold</p>
+        <img class="pc-img-full" src="After the Fires/imatges/5-3.png" alt="Point cloud — photogrammetry of chimney">
+        <p class="pc-caption">Point Cloud — Photogrammetry of Chimney</p>
+        <img class="pc-img-full" src="After the Fires/imatges/5-4.png" alt="3D model — ultra high-resolution drone and DSLR photogrammetry">
+        <p class="pc-caption">3D Model — Ultra High-Resolution Photogrammetry (Drone + DSLR)</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 03 Exhibition -->
+      <div class="pc-block">
+        <span class="pc-label">03 &nbsp;—&nbsp; Exhibition</span>
+        <img class="pc-img-full" src="After the Fires/imatges/6-1.png" alt="Gallery set-up at SCI-Arc — Architecture After the Fires: LA in Progress">
+        <p class="pc-caption">Gallery Set-Up at SCI-Arc — Architecture After the Fires: LA in Progress</p>
+        <img class="pc-img-full" src="After the Fires/imatges/6-2.png" alt="Gallery set-up at SCI-Arc — Architecture After the Fires: LA in Progress">
+        <p class="pc-caption">Gallery Set-Up at SCI-Arc — Architecture After the Fires: LA in Progress</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- Acknowledgements -->
+      <div class="pc-block">
+        <span class="pc-label">Acknowledgements</span>
+        <p class="pc-body">This project was a student-driven initiative. We are ever-grateful for the participation of the homeowners.</p>
+        <p class="pc-body">Created in Collaboration with Altadena Residents: Kelly Akashi, The Syms Family, Alison Amegatcher, Diana Thater, Erik Ghenoiu, and Sameer Elayyan — and a Team of Producers: Joel Feree, Sara Simon, Ade Ayoade, Natalie Rubio, Kahin Vasi, Martí Vera Marsal, Carlos Bonachea, Kai Johnson, Jillian Leedy, Sophie Pennetier, Pierce Meyers, and Matt Shaw — with the Support of the SCI-Arc Resilient Futures Task Force, LACMA Art &amp; Technology Lab, ScanLAB Projects, PT Capture, and The Little Things AI.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PROJECT VIEW: CASA ── -->
+  <div class="proj-view" id="view-casa">
+    <div class="proj-bar">
+      <button class="proj-back" onclick="navigateBack()">← Back</button>
+      <span class="proj-bar-title">LACasa per la teulada</span>
+      <a class="proj-dl" href="Portfolio_VeraMarsalMarti.pdf#page=17" target="_blank">
+        Download PDF ↗
+      </a>
+    </div>
+    <div class="proj-pages">
+
+      <!-- Cover -->
+      <div class="pc-block pc-cover">
+        <span class="pc-label">2024 &nbsp;·&nbsp; Inflatable Architecture &nbsp;·&nbsp; Rural Reactivation</span>
+        <h2 class="pc-title">LACasa per la teulada / <em>The House through the Roof</em></h2>
+        <p class="pc-body">This project explores the potential of integrating inflatable architectural structures to revitalize abandoned rural homes and forgotten villages in the Catalan Pyrenees. By addressing the challenge of reactivating these underutilized spaces, the proposal aims to create a seamless dialogue between traditional architecture and innovative design. The intervention envisions a lightweight, portable solution that leverages existing structures without altering them, adapting to the specific needs of rural communities. The core concept focuses on designing inflatable modules that harmonize with the architectural character of deserted homes while preserving their original forms. These modules fit within the preexisting constructions, creating an interesting and respectful link between the past and present.</p>
+        <p class="pc-credits">Marc Busquets Gallagher &nbsp;·&nbsp; Adrià Mas Baurier &nbsp;·&nbsp; Martí Vera Marsal</p>
+        <div class="pc-tags">
+          <span class="pc-tag">Rhino</span>
+          <span class="pc-tag">Grasshopper</span>
+          <span class="pc-tag">Karamba</span>
+          <span class="pc-tag">HoneyBee</span>
+          <span class="pc-tag">Kangaroo</span>
+          <span class="pc-tag">Polycam</span>
+          <span class="pc-tag">AutoCAD</span>
+        </div>
+        <span class="pc-scroll-hint">↓ scroll</span>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 01 Cartography & Current Situation -->
+      <div class="pc-block">
+        <span class="pc-label">01 &nbsp;—&nbsp; Cartography &amp; Current Situation</span>
+        <img class="pc-img-full" src="LACasa/imatges/2-1.png" alt="Town map and connections — Catalan Pyrenees">
+        <p class="pc-caption">Town Map &amp; Connections — Catalan Pyrenees</p>
+        <img class="pc-img-full" src="LACasa/imatges/2-2.png" alt="Town population situation">
+        <p class="pc-caption">Town Population Situation</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 02 Inflatable Strategy -->
+      <div class="pc-block">
+        <span class="pc-label">02 &nbsp;—&nbsp; Inflatable Strategy</span>
+        <img class="pc-img-full" src="LACasa/imatges/3-1.png" alt="Inflatable pattern — Grasshopper">
+        <p class="pc-caption">Inflatable Pattern — Grasshopper</p>
+        <img class="pc-img-full" src="LACasa/imatges/3-2.png" alt="3D Scans — LIDAR Polycam">
+        <p class="pc-caption">3D Scans — LIDAR Polycam</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 03 San Romà — Inflation Strategy -->
+      <div class="pc-block">
+        <span class="pc-label">03 &nbsp;—&nbsp; San Romà — Inflation Strategy</span>
+        <img class="pc-img-full" src="LACasa/imatges/4-1.png" alt="General axonometry">
+        <p class="pc-caption">General Axonometry</p>
+        <img class="pc-img-full" src="LACasa/imatges/4-2.png" alt="Inflation animation — simulated sequence">
+        <p class="pc-caption">Inflation Animation — Simulated Sequence</p>
+        <img class="pc-img-full" src="LACasa/imatges/4-3.png" alt="Section">
+        <p class="pc-caption">Section — 1/50</p>
+        <p class="pc-body">The core concept focuses on designing elevated inflatable modules sustained by multiple pillars that adapt to the plan and characteristics of the construction. These modules harmonize with the architectural character of deserted homes while preserving their original forms. By fitting within the preexisting constructions, they create an interesting and respectful link between the past and present. With minimal construction, adequate climate conditions are achieved for mountain shelter activities.</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 04 Structure & Axonometry -->
+      <div class="pc-block">
+        <span class="pc-label">04 &nbsp;—&nbsp; Structure &amp; Axonometry</span>
+        <img class="pc-img-full" src="LACasa/imatges/5-1.png" alt="Structural condition plan">
+        <p class="pc-caption">Structural Condition Plan</p>
+        <img class="pc-img-full" src="LACasa/imatges/5-2.png" alt="Axonometry and structural diagram — Grasshopper Karamba">
+        <p class="pc-caption">Axonometry &amp; Structural Diagram — Grasshopper (Karamba)</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 05 Climate Analysis -->
+      <div class="pc-block">
+        <span class="pc-label">05 &nbsp;—&nbsp; Climate Analysis</span>
+        <img class="pc-img-full" src="LACasa/imatges/6-1.png" alt="Temperature plan diagram">
+        <p class="pc-caption">Temperature Plan Diagram</p>
+        <img class="pc-img-full" src="LACasa/imatges/6-2.png" alt="Humidity plan diagram">
+        <p class="pc-caption">Humidity Plan Diagram</p>
+        <img class="pc-img-full" src="LACasa/imatges/6-3.png" alt="Climate analysis — Winter / Summer / Yearly average">
+        <p class="pc-caption">Climate Analysis — Winter / Summer / Yearly Average — Grasshopper (HoneyBee)</p>
+        <img class="pc-img-full" src="LACasa/imatges/6-4.png" alt="Real life temperature variations — thermal camera">
+        <p class="pc-caption">Real Life Temperature Variations — Thermal Camera</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 06 Renders & Model -->
+      <div class="pc-block">
+        <span class="pc-label">06 &nbsp;—&nbsp; Renders &amp; Model</span>
+        <img class="pc-img-full" src="LACasa/imatges/7-1.png" alt="Renders — inflatable in ruined village">
+        <p class="pc-caption">Renders — Inflatable in Ruined Village</p>
+        <img class="pc-img-full" src="LACasa/imatges/7-2.png" alt="Physical model — structure and membrane">
+        <p class="pc-caption">Physical Model — Structure &amp; Membrane</p>
+        <img class="pc-img-full" src="LACasa/imatges/7-3.png" alt="Physical model — inflatable form">
+        <p class="pc-caption">Physical Model — Inflatable Form</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- Video -->
+      <div class="pc-block">
+        <span class="pc-label">Video Documentation</span>
+        <div class="pc-video-wrap">
+          <iframe src="https://www.youtube.com/embed/rQqW5BiponA"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PROJECT VIEW: CANTERA ── -->
+  <div class="proj-view" id="view-cantera">
+    <div class="proj-bar">
+      <button class="proj-back" onclick="navigateBack()">← Back</button>
+      <span class="proj-bar-title">LACantera / The Quarry</span>
+      <a class="proj-dl" href="Portfolio_VeraMarsalMarti.pdf#page=25" target="_blank">
+        Download PDF ↗
+      </a>
+    </div>
+    <div class="proj-pages">
+
+      <!-- Title -->
+      <div class="pc-block pc-cover">
+        <span class="pc-label">2024 &nbsp;·&nbsp; Landscape Architecture &nbsp;·&nbsp; Data Research</span>
+        <h2 class="pc-title">LACantera / <em>The Quarry</em></h2>
+        <p class="pc-body">This project aims to challenge the scale of landscape architecture and create a proposal based on data analysis with a focus on wind and erosion. Located in the Coma Roja Quarry, the proposal speculates on the possible evolution of the site. Due to the site's hindrance to natural growth, the intervention aims to aid vegetation increase by leveraging existing features. The main concept is to control erosion by excavating certain paths determined by terrain and climate factors, guiding rainfall and wind to deposit sediments in key areas. The result is a series of "particle accelerators" that help channel the wind to push particles to points with higher growth probability and help the quarry renaturalize.</p>
+        <p class="pc-credits">Marc Busquets Gallagher &nbsp;·&nbsp; Javier Marcos Gonzalez &nbsp;·&nbsp; Martí Vera Marsal</p>
+        <div class="pc-tags">
+          <span class="pc-tag">Rhino</span>
+          <span class="pc-tag">Grasshopper</span>
+          <span class="pc-tag">Ansys</span>
+          <span class="pc-tag">Blender</span>
+          <span class="pc-tag">AutoCAD</span>
+        </div>
+        <span class="pc-scroll-hint">↓ scroll</span>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 01 Location & Climate Analysis -->
+      <div class="pc-block">
+        <span class="pc-label">01 &nbsp;—&nbsp; Location &amp; Climate Analysis</span>
+        <img class="pc-img-full" src="LACantera/imatges/2-1.png" alt="Wind analysis at different levels of the quarry">
+        <p class="pc-caption">Wind Analysis at Different Levels — Grasshopper</p>
+        <img class="pc-img-full" src="LACantera/imatges/2-2.png" alt="Particle erosion of the quarry">
+        <p class="pc-caption">Particle Erosion of the Quarry — Blender</p>
+        <img class="pc-img-full" src="LACantera/imatges/2-3.png" alt="Panoramic view of Coma Roja Quarry">
+        <p class="pc-caption">Panoramic View — Coma Roja Quarry, Garraf</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 02 Project Strategies -->
+      <div class="pc-block">
+        <span class="pc-label">02 &nbsp;—&nbsp; Project Strategies</span>
+        <span class="pc-sub">Main Plans of a "Particle Accelerator"</span>
+        <img class="pc-img-full" src="LACantera/imatges/3-1.png" alt="Site floor plan with particle paths">
+        <p class="pc-caption">Floor Plan — Particle Accelerator with Topographic Contours</p>
+        <img class="pc-img-full" src="LACantera/imatges/3-2.png" alt="Wind flow simulation">
+        <p class="pc-caption">General Wind Longitudinal Section — Ansys Simulation</p>
+        <p class="pc-body">The geometry of the various particle accelerators was designed based on extensive wind analysis, optimizing the redistribution of particles across the quarry. The design manipulates the width of the excavations to accelerate wind in targeted areas, ensuring particles are deposited at sites with the highest growth probability.</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 03 General Plan, Sections & Render -->
+      <div class="pc-block">
+        <span class="pc-label">03 &nbsp;—&nbsp; General Plan, Sections &amp; Render</span>
+        <img class="pc-img-full" src="LACantera/imatges/4-1.png?v=2" alt="Transversal sections">
+        <p class="pc-caption">Transversal Sections</p>
+        <img class="pc-img-full" src="LACantera/imatges/4-2.png?v=2" alt="Longitudinal section">
+        <p class="pc-caption">Longitudinal Section</p>
+        <img class="pc-img-full" src="LACantera/imatges/4-3.png?v=2" alt="General plan of particle accelerators">
+        <p class="pc-caption">General Plan of Particle Accelerators</p>
+        <img class="pc-img-full" src="LACantera/imatges/4-4.png" alt="Render — particle deposition and vegetation growth">
+        <p class="pc-caption">Render — Particle Deposition &amp; Vegetation Growth</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 04 Simulations & Model -->
+      <div class="pc-block">
+        <span class="pc-label">04 &nbsp;—&nbsp; Simulations &amp; Model</span>
+        <img class="pc-img-full" src="LACantera/imatges/5-1.png" alt="Particle deposition simulation — before and after">
+        <p class="pc-caption">Particle Deposition Simulation — Before &amp; After</p>
+        <img class="pc-img-full" src="LACantera/imatges/5-2.png" alt="Wind particle pathway analysis">
+        <p class="pc-caption">Particle Pathway Analysis — Wind Simulation</p>
+        <img class="pc-img-full" src="LACantera/imatges/5-3.png" alt="Physical model — erosion test">
+        <p class="pc-caption">Physical Model — Erosion Test</p>
+        <img class="pc-img-full" src="LACantera/imatges/5-4.png" alt="Physical model — detail views">
+        <p class="pc-caption">Physical Model — Detail Views</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- Video -->
+      <div class="pc-block">
+        <span class="pc-label">Video Documentation</span>
+        <div class="pc-video-wrap">
+          <iframe src="https://www.youtube.com/embed/0adW6UwvXmA"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PROJECT VIEW: M3 ── -->
+  <div class="proj-view" id="view-m3">
+    <div class="proj-bar">
+      <button class="proj-back" onclick="navigateBack()">← Back</button>
+      <span class="proj-bar-title">m³ - Portable Architecture</span>
+      <a class="proj-dl" href="Portfolio_VeraMarsalMarti.pdf#page=31" target="_blank">
+        Download PDF ↗
+      </a>
+    </div>
+    <div class="proj-pages">
+
+      <!-- Cover -->
+      <div class="pc-block pc-cover">
+        <span class="pc-label">2023 &nbsp;·&nbsp; Social Clothing &nbsp;·&nbsp; Wearable Space</span>
+        <h2 class="pc-title">m³ - <em>Portable Architecture</em></h2>
+        <p class="pc-body">This project intends to push the boundaries of portable architecture and create a proposal for social clothing. This innovative concept revolves around the interactive dynamics of individual space, in a time after COVID, where each garment adapts and transforms in response to its exchange with neighboring pieces. Picture a dynamic symphony of clothing that creates a protective "bubble" shielding users from the elements, seamlessly adapting to both sun and rain. When combined with air, this transformative ensemble unveils a visible personal space, beautifully merging individuality and connectivity, redefining the boundaries of personal and shared experiences. Our social clothing proposal envisions a future where garments transcend mere aesthetics, forging a new era of collaborative and adaptive wearable art.</p>
+        <div class="pc-tags">
+          <span class="pc-tag">AutoCAD</span>
+        </div>
+        <span class="pc-scroll-hint">↓ scroll</span>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 01 Social Experiment -->
+      <div class="pc-block">
+        <span class="pc-label">01 &nbsp;—&nbsp; Social Experiment</span>
+        <p class="pc-body">The exercise consisted in measuring personal and social spaces of different individuals. To do so, we devised an experiment and mapped out the different interactions. This will help lead to a first prototype for our approach of flexible architecture.</p>
+        <img class="pc-img-full" src="m3/imatges/2-1.png" alt="Personal and social space mapping — interaction diagram">
+        <p class="pc-caption">Personal &amp; Social Space Mapping — Interaction Diagram</p>
+        <img class="pc-img-full" src="m3/imatges/3-1.png" alt="How to approach a stranger — street study">
+        <p class="pc-caption">How to Approach a Stranger — Street Study</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 02 Typological Plan -->
+      <div class="pc-block">
+        <span class="pc-label">02 &nbsp;—&nbsp; Typological Plan</span>
+        <span class="pc-sub">Exploration of Combinations &amp; Relationships Between Single, Paired &amp; Triplet Prototypes</span>
+        <img class="pc-img-full" src="m3/imatges/4-1.png" alt="Typological plan — prototype combinations">
+        <p class="pc-caption">Typological Plan — Prototype Combinations</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- 03 Model -->
+      <div class="pc-block">
+        <span class="pc-label">03 &nbsp;—&nbsp; Model</span>
+        <img class="pc-img-full" src="m3/imatges/5-1.png" alt="Model — wearable structure, studio portraits">
+        <p class="pc-caption">Model — Wearable Structure, Studio Portraits</p>
+        <img class="pc-img-full" src="m3/imatges/5-2.png" alt="Model — aerial views, courtyard context">
+        <p class="pc-caption">Model — Aerial Views, Courtyard Context</p>
+        <img class="pc-img-full" src="m3/imatges/5-3.png" alt="Model — membrane detail, backlit">
+        <p class="pc-caption">Model — Membrane Detail, Backlit</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <!-- Video -->
+      <div class="pc-block">
+        <span class="pc-label">Video Documentation</span>
+        <div class="pc-video-wrap">
+          <iframe src="https://www.youtube.com/embed/C8LYDC52XoA"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── RESEARCH VIEW — the ground, opened ── -->
+  <div class="proj-view" id="view-research">
+    <div class="proj-bar">
+      <button class="proj-back" id="researchBackBtn" onclick="navigateBack()">↑ Back</button>
+      <span class="proj-bar-title">Research</span>
+    </div>
+    <div class="proj-pages">
+
+      <div class="pc-block pc-cover" data-rail-level="part" data-rail-title="Research">
+        <p class="pc-body">In 1799, Francisco Goya cut a caption into the plate of his own etching. A man slumps at his desk as owls and bats rise from the dark behind him. The title reads El sueño de la razón produce monstruos; the sleep of reason produces monsters. Except sueño means both sleep and dream. Read one way, the monsters arrive because reason has nodded off: absent, it leaves a vacancy, and they fill it. Read the other, reason is dreaming them into being: present, it is their author. A caption is meant to settle such a thing; this one refuses. The plate never says whether what rules the picture is missing from it, or making it.</p>
+        <p class="pc-body">My research is about the parts of an image, or a building, we never look at directly: the ones we look through, or past, or over. The frame that decides what appears; the ground a figure is read against; the basement a discipline is built on and taught to trust. Each does the work, and none is meant to be seen. And like the caption, none of them will settle. Each comes forward, authors what it carries, withholds, and refuses to resolve. It is less an argument than a way of looking, written as much as it is drawn, and more willing to hold a question open than to close it.</p>
+      </div>
+
+      <hr class="pc-hr">
+
+      <span class="research-group-label">The theory — in two parts</span>
+
+      <!-- Part 1 — Surreal Frame -->
+      <div class="research-part" data-part="surreal-frame">
+        <div class="pc-block pc-cover" data-rail-level="part" data-rail-title="Surreal Frame">
+          <span class="pc-label">Part 1</span>
+          <h2 class="pc-title research-part-title" onclick="toggleResearchPart('sfBody','sfToggle')">Surreal Frame</h2>
+          <p class="pc-body">It begins in the viewport. In my MS Synthetic Landscapes thesis the modeling space becomes a surreal landscape, an artificial ground where digital objects acquire the illusion of physical presence. Within the soft gradient of the viewport, objects are arranged, duplicated, and transformed into recursive compositions that generate worlds inside other worlds. Each frame acts as a container that suspends these fragments of space, giving them the appearance of landscapes. The project unfolds through a series of digital renderings and videos that investigate how framing and layering can turn simple objects into self-contained worlds, landscapes nested, reflected, and multiplied inside one another.</p>
+          <p class="pc-body">Beyond its formal construction, it questions the very idea of what makes a landscape exist, and proposes that landscapes are not independent entities but perceptual events that appear only when framed, when edges define what is visible and what is not. Once the frame is removed, they dissolve, absorbed by larger environments. The landscape becomes a fiction of perception, a condition that emerges through attention and containment; and Surrealism, here, is not a style but a structure: the logic that lets contradictory realities coexist in one space. Maybe landscapes are not as real as the objects themselves. Maybe the concept of landscape is surreal, beyond the real, in itself.</p>
+          <div class="pc-tags">
+            <span class="pc-tag">Generative AI</span>
+            <span class="pc-tag">Blender</span>
+            <span class="pc-tag">3D Printer</span>
+          </div>
+          <button class="research-toggle" id="sfToggle" aria-expanded="false" aria-controls="sfBody" onclick="toggleResearchPart('sfBody','sfToggle')">+ Show More</button>
+        </div>
+
+        <div class="research-expand" id="sfBody">
+         <div class="research-expand-inner">
+
+          <hr class="pc-hr">
+
+          <!-- 01 Sculpture Exploration -->
+          <div class="pc-block" data-rail-level="sub" data-rail-title="Sculpture Exploration">
+            <span class="pc-label">01 &nbsp;—&nbsp; Sculpture Exploration</span>
+            <img class="pc-img-full" src="research/images/1-1.png" alt="Four framed white relief sculptures, gallery-lit">
+            <p class="pc-caption">Framed Relief Sculptures — Gallery Installation</p>
+            <div class="pc-grid-3">
+              <img class="pc-img-full" src="research/images/1-2.png" alt="White relief study — cones and concentric rings">
+              <img class="pc-img-full" src="research/images/1-3.png" alt="White relief study — coiled and spiral forms">
+              <img class="pc-img-full" src="research/images/1-4.png" alt="White relief study — granular tendrils">
+            </div>
+            <p class="pc-caption">Framed Sculptures</p>
+          </div>
+
+          <hr class="pc-hr">
+
+          <!-- 02 Surreal Frame (incl. Curated Frames) -->
+          <div class="pc-block" data-rail-level="sub" data-rail-title="Surreal Frame">
+            <span class="pc-label">02 &nbsp;—&nbsp; Surreal Frame</span>
+            <img class="pc-img-full" src="research/images/1-8.png" alt="Domestic objects and a distillation apparatus on an infinite grey-and-blue gradient ground">
+            <p class="pc-caption">The Viewport as Landscape — Table, Distillation Apparatus, Infinite Ground</p>
+            <img class="pc-img-full" src="research/images/1-11.png" alt="Curated frames — gothic portal, eye in flesh, ship in the dunes">
+            <p class="pc-caption">Baroque-Gothic, Symbolism, Romanticism</p>
+            <img class="pc-img-full" src="research/images/1-10.png" alt="Curated frames — solitary house, still life, arched interior">
+            <p class="pc-caption">Naturalism, Still Life, Mannerism</p>
+            <img class="pc-img-full" src="research/images/1-9.png" alt="Curated frames — column study, marble courtyard, baroque interior">
+            <p class="pc-caption">Modernism, Abstract Modernism, Dadaism</p>
+          </div>
+
+          <hr class="pc-hr">
+
+          <!-- Video -->
+          <div class="pc-block" data-rail-level="sub" data-rail-title="Video">
+            <span class="pc-label">Video Documentation</span>
+            <div class="pc-video-wrap">
+              <iframe src="https://www.youtube.com/embed/pNlrnAkkrOU"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen></iframe>
+            </div>
+          </div>
+
+          <hr class="pc-hr">
+
+          <!-- 03 Thesis Exhibition -->
+          <div class="pc-block" data-rail-level="sub" data-rail-title="Thesis Exhibition">
+            <span class="pc-label">03 &nbsp;—&nbsp; Thesis Exhibition</span>
+            <img class="pc-img-full" src="research/images/1-12.jpg" alt="Gallery installation — convex mirror, video projection, and a grid of framed prints">
+            <p class="pc-caption">Gallery Installation — Mirror, Projection &amp; Framed Prints</p>
+            <img class="pc-img-full" src="research/images/1-13.jpg" alt="A gothic arched window projected onto the gallery wall, beside a convex mirror">
+            <p class="pc-caption">Projection — The Gothic Window Thrown on the Wall</p>
+            <img class="pc-img-full" src="research/images/1-14.jpg" alt="Convex mirror reflecting the gallery, lens projection detail">
+            <p class="pc-caption">Convex Mirror — Lens Projection Detail</p>
+            <img class="pc-img-full" src="research/images/1-15.jpg" alt="Convex mirror, side profile">
+            <p class="pc-caption">Convex Mirror — Side Profile</p>
+            <img class="pc-img-full" src="research/images/1-16.jpg" alt="Convex mirror, macro detail of the light source">
+            <p class="pc-caption">Convex Mirror — Macro Detail</p>
+          </div>
+
+         </div>
+        </div>
+      </div>
+
+      <hr class="pc-hr" style="margin: 4rem 0;">
+
+      <!-- Part 2 — Background -->
+      <div class="research-part" data-part="background">
+        <div class="pc-block pc-cover" data-rail-level="part" data-rail-title="Background">
+          <span class="pc-label">Part 2</span>
+          <h2 class="pc-title research-part-title" onclick="toggleResearchPart('bgBody','bgToggle')">Background</h2>
+          <p class="pc-body">If the viewport is a background I build, the next is one I only borrow. In my MS Design Theory and Pedagogy thesis, I take works already made and strip away what stands in front of them, until nothing is left but the ground: the plain behind the portrait, the mortar around the brick, the part you always read past. It does not argue so much as isolate. Each ground is set out in text, then forced to appear again in video by putting two conventions of representation against one another.</p>
+          <p class="pc-body">At its center is a drawing. Massimo Scolari's Urban Passage sets an axonometric cube in a field of Surrealist rock: the rock recedes the way a ground should, and the cube, measured, parallel, with no vanishing point and no place to stand, refuses to sit in it. Writing on it in 1980, Manfredo Tafuri moved the strangeness out of the object and into the drawing itself: &ldquo;the space for representation has been separated from the representation of space.&rdquo; The drawing was never a window onto a building; it was the system that lets a building be shown, and architecture does not merely draw in such systems, it is conducted in them. This is the real subject: not the ground and not the object, but representation itself, and a discipline built on conventions it transmits without ever examining.</p>
+          <p class="pc-body">Whether the background is absent from what it carries or quietly its author, the work does not decide, and it is not certain the two can always be told apart, or that the strangeness resolves the same way twice. It stays observational on purpose. Like the caption it keeps returning to, it would rather hold the question open than close it, and asks only whether a discipline can be taught to look at the ground it stands on, or whether standing on it requires never looking.</p>
+          <div class="pc-tags">
+            <span class="pc-tag">Blender</span>
+            <span class="pc-tag">3D Print</span>
+            <span class="pc-tag">Video</span>
+          </div>
+          <button class="research-toggle" id="bgToggle" aria-expanded="false" aria-controls="bgBody" onclick="toggleResearchPart('bgBody','bgToggle')">+ Show More</button>
+        </div>
+
+        <div class="research-expand" id="bgBody">
+         <div class="research-expand-inner">
+
+          <hr class="pc-hr">
+
+          <!-- 02 Study of the Background -->
+          <div class="pc-block" data-rail-level="sub" data-rail-title="Study of the Background">
+            <span class="pc-label">01 &nbsp;—&nbsp; Study of the Background</span>
+            <div class="pc-grid-2 research-render-grid">
+              <img class="pc-img-full" src="research/images/2-1.png" alt="Watercolor mountains in blue and pink behind an axonometric cube and a floating wireframe form">
+              <img class="pc-img-full" src="research/images/2-2.png" alt="An abstract wireframe study of stones and pebbles across a floor and wall">
+              <p class="pc-caption research-render-caption">M. Scolari, S. Lewerentz</p>
+              <img class="pc-img-full" src="research/images/2-3.png" alt="Grey Blender viewport still — domestic furniture on an infinite gradient ground">
+              <img class="pc-img-full" src="research/images/2-4.png" alt="Grey Blender viewport still — a porch and a rocking chair">
+              <p class="pc-caption research-render-caption">M. Scolari, A. Robbe-Grillet</p>
+              <img class="pc-img-full" src="research/images/2-5.png" alt="A gilded birdcage and a wooden ladder floating in darkness">
+              <img class="pc-img-full" src="research/images/2-6.png" alt="A ribbed concrete facade with two round windows of different sizes">
+              <p class="pc-caption research-render-caption">A. Tarkovsky, S. Takamatsu</p>
+              <img class="pc-img-full" src="research/images/2-7.png" alt="A plain grey brick interior, walls floor and ceiling the same material, ending in a doorway">
+              <img class="pc-img-full" src="research/images/2-8.png" alt="Goya's etching, El sueño de la razón produce monstruos — a man asleep at a desk, beset by owls and bats">
+              <p class="pc-caption research-render-caption">L. Buñuel Portolés, F. Goya</p>
+            </div>
+            <img class="pc-img-full" src="research/images/2-9.png" alt="A typed page of observational text, titled [backgrounds]">
+          </div>
+
+          <hr class="pc-hr">
+
+          <!-- Video -->
+          <div class="pc-block" data-rail-level="sub" data-rail-title="Video">
+            <span class="pc-label">Video Documentation</span>
+            <div class="pc-video-wrap">
+              <iframe src="https://www.youtube.com/embed/Z_A8qJOiupI?start=21"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen></iframe>
+            </div>
+          </div>
+
+         </div>
+        </div>
+      </div>
+
+      <hr class="pc-hr" style="margin: 4rem 0;">
+
+      <a class="pc-block pc-cover research-entry-outbound" href="https://offramp.sciarc.edu" target="_blank" rel="noopener" tabindex="0" data-rail-level="part" data-rail-title="Monster">
+        <span class="pc-label">Part 3 &nbsp;·&nbsp; Underside</span>
+        <h2 class="pc-title">Monster &nbsp;·&nbsp; OFFRAMP 19</h2>
+        <p class="pc-body">OFFRAMP 19, the SCI-Arc journal, co-edited with Salomon Moises Cordova.</p>
+        <p class="pc-body">A pedagogical temperature check of the discipline: the monster not as creature but as underside — the record a field is built on and inherits as given, the part below datum where the foundation is still negotiating with ground no drawing anticipated. Above grade the composition holds; beneath it, the improvising. The issue holds that gap open across thirty-odd contributors rather than resolving it.</p>
+        <div class="pc-tags">
+          <span class="pc-tag">Co-Editor</span>
+        </div>
+        <span class="pc-scroll-hint">Visit OFFRAMP 19 ↗</span>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ── ABOUT OVERLAY ── -->
+  <div class="overlay" id="aboutOverlay">
+    <button class="overlay-close" onclick="toggleAbout(event)">Close ×</button>
+    <div class="overlay-bio">
+      <p>Dear Reader,</p>
+      <p>I think of architecture as a way of editing the world: questioning the term itself and testing it across scales, from the essence of aesthetics to the reactivation of forgotten communities. The work is transversal by instinct, blending disciplines, tools and perspectives, and holds throughout to a single attentiveness: to the person, the built environment, and the landscape that frames them.</p>
+      <p>My work spans computational design, representation, and theory, and begins from a conviction that a building is never only a building. What you'll find here isn't a set of finished answers but an ongoing inquiry, a work in progress shaped by growth and curiosity, and one preoccupation keeps surfacing across all of it, enough that it has grown into a research of its own, with its own place on this site.</p>
+      <p>— Martí Vera Marsal</p>
+    </div>
+    <div class="contact-row">
+      <div class="contact-item">
+        <span class="contact-label">Email</span>
+        <a href="mailto:martiveramarsal@gmail.com" class="contact-link">martiveramarsal@gmail.com</a>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">Instagram</span>
+        <a href="https://instagram.com/marti.obj" target="_blank" class="contact-link">@marti.obj</a>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">YouTube</span>
+        <a href="https://youtube.com/@marti_obj" target="_blank" class="contact-link">@marti_obj</a>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">LinkedIn</span>
+        <a href="https://www.linkedin.com/in/mart%C3%AD-vera-marsal-382b06223/" target="_blank" class="contact-link">Martí Vera Marsal</a>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">Portfolio</span>
+        <a href="Portfolio_VeraMarsalMarti.pdf" target="_blank" class="contact-link">Download PDF ↗</a>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">CV</span>
+        <a href="CV_VeraMarsalMarti.pdf" target="_blank" class="contact-link">Download PDF ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJECT PROGRESS RAIL -->
+  <div class="proj-rail" id="projRail"></div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox">
+    <span class="lightbox-close" onclick="closeLightbox()">Close ×</span>
+    <span class="lightbox-counter" id="lightboxCounter"></span>
+    <button class="lightbox-arrow lightbox-prev" onclick="event.stopPropagation(); prevLightboxImage()" aria-label="Previous image">‹</button>
+    <img id="lightbox-img" src="" alt="">
+    <button class="lightbox-arrow lightbox-next" onclick="event.stopPropagation(); nextLightboxImage()" aria-label="Next image">›</button>
+  </div>
+
+  <script>
+    let currentRailView = null;
+    let currentRailBlocks = [];
+
+    function openProject(id) {
+      document.getElementById(id).classList.add('open');
+      document.querySelectorAll('.seg.seg-active').forEach(s => s.classList.remove('seg-active'));
+      buildRail(id);
+    }
+
+    function closeProject(id) {
+      const view = document.getElementById(id);
+      view.classList.remove('open');
+      view.scrollTop = 0;  // reset scroll position on close
+      hideRail();
+    }
+
+    // ── Homepage strip on touch/no-hover devices: a tap can't ":hover" to
+    // preview a segment first, so a single tap used to jump straight into
+    // the project — jarring when just browsing. Here the first tap on a
+    // segment only reveals it (mirrors the desktop hover state via
+    // .seg-active, see the matching CSS above); a second tap on that same,
+    // already-revealed segment enters the project. Untouched on devices
+    // with real hover — those keep the original click-to-enter behavior. ──
+    (function () {
+      const isTouchMobile = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+      if (!isTouchMobile) {
+        document.querySelectorAll('.seg[data-project]').forEach(seg => {
+          seg.addEventListener('click', () => navigateToView(seg.dataset.project));
+        });
+        return;
+      }
+      document.querySelectorAll('.seg[data-project]').forEach(seg => {
+        seg.addEventListener('click', () => {
+          if (seg.classList.contains('seg-active')) {
+            navigateToView(seg.dataset.project);
+          } else {
+            document.querySelectorAll('.seg.seg-active').forEach(s => s.classList.remove('seg-active'));
+            seg.classList.add('seg-active');
+          }
+        });
+      });
+      // Tapping anywhere outside the strip collapses any revealed segment.
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.strip')) {
+          document.querySelectorAll('.seg.seg-active').forEach(s => s.classList.remove('seg-active'));
+        }
+      });
+    })();
+
+    function toggleAbout(e) {
+      if (e) e.preventDefault();
+      const isOpen = document.getElementById('aboutOverlay').classList.contains('open');
+      if (isOpen) { navigateBack(); } else { navigateToView('aboutOverlay'); }
+    }
+
+    // ── Research view — entered via the "Research" subtitle word or the
+    // basement slab; closed via Back, Esc (handled by the generic keydown
+    // handler below, since this view carries .proj-view like the others),
+    // or a click on its background. Deliberately kept separate from
+    // openProject/closeProject: it builds its own two-level rail (see
+    // buildResearchRail) instead of the generic one-dot-per-block rail. ──
+    function openResearch() {
+      document.getElementById('view-research').classList.add('open');
+      buildResearchRail();
+    }
+
+    function closeResearch() {
+      const view = document.getElementById('view-research');
+      view.classList.remove('open');
+      view.scrollTop = 0;
+      hideRail();
+      // Always re-enter collapsed, showing only the two statements.
+      collapseResearchParts();
+    }
+
+    // ── Browser history ──
+    // Every open*/close* function above is pure DOM (no history calls), so
+    // it's safe for the popstate handler below to reuse them directly.
+    // This layer is the only thing that touches history: opening a view
+    // pushes one entry; every close path (Back buttons, Escape, the About
+    // close ×) just calls navigateBack(), which hands off to
+    // history.back() — the popstate listener does the actual closing. That
+    // way the browser's own back/forward buttons and the in-page controls
+    // always agree on what's open, instead of the URL bar never moving.
+    const VIEW_OPENERS = {
+      'view-fires':    () => openProject('view-fires'),
+      'view-casa':     () => openProject('view-casa'),
+      'view-cantera':  () => openProject('view-cantera'),
+      'view-m3':       () => openProject('view-m3'),
+      'view-research': () => openResearch(),
+      'aboutOverlay':  () => document.getElementById('aboutOverlay').classList.add('open'),
+    };
+
+    function closeAllViews() {
+      closeProject('view-fires');
+      closeProject('view-casa');
+      closeProject('view-cantera');
+      closeProject('view-m3');
+      closeResearch();
+      document.getElementById('aboutOverlay').classList.remove('open');
+    }
+
+    function navigateToView(id) {
+      history.pushState({ view: id }, '', '#' + id);
+      (VIEW_OPENERS[id] || function () {})();
+    }
+
+    function navigateBack() {
+      if (history.state && history.state.view) history.back();
+    }
+
+    window.addEventListener('popstate', e => {
+      closeAllViews();
+      const id = e.state && e.state.view;
+      if (id && VIEW_OPENERS[id]) VIEW_OPENERS[id]();
+    });
+
+    // ── Surreal Frame / Background: collapsed to their cover statement by
+    // default; "Show More" reveals the images, "Show Less" collapses again. ──
+    function setResearchExpanded(body, btn, expanded) {
+      if (!body) return;
+      body.classList.toggle('open', expanded);
+      if (btn) {
+        btn.textContent = expanded ? '− Show Less' : '+ Show More';
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      }
+      // The rail mirrors whatever is actually visible: 4 dots collapsed,
+      // plus that part's sub-dots while it's expanded. Only rebuild while
+      // Research is actually open — closeResearch() collapses both parts
+      // right after hiding the rail, and that must not resurrect it.
+      const view = document.getElementById('view-research');
+      if (view.classList.contains('open')) buildResearchRail();
+    }
+
+    function toggleResearchPart(bodyId, btnId) {
+      const body = document.getElementById(bodyId);
+      const btn = document.getElementById(btnId);
+      const expanding = !body.classList.contains('open');
+      setResearchExpanded(body, btn, expanding);
+      // The cover's own size never changes — instead, bring the button (and
+      // whatever slides open right beneath it) up into view, so the reveal
+      // is visible immediately without the user having to scroll for it.
+      if (expanding && btn) {
+        btn.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function collapseResearchParts() {
+      ['sfBody', 'bgBody'].forEach(bodyId => {
+        const body = document.getElementById(bodyId);
+        const btn = document.getElementById(bodyId === 'sfBody' ? 'sfToggle' : 'bgToggle');
+        setResearchExpanded(body, btn, false);
+      });
+    }
+
+
+    // ── Project progress rail ──
+    function buildRail(id) {
+      const view = document.getElementById(id);
+      currentRailBlocks = Array.from(view.querySelectorAll('.proj-pages > .pc-block'));
+      const rail = document.getElementById('projRail');
+      rail.innerHTML = '';
+      rail.classList.toggle('dark', id === 'view-fires');
+
+      currentRailBlocks.forEach((block, i) => {
+        const mark = document.createElement('button');
+        mark.type = 'button';
+        mark.className = 'proj-rail-mark';
+        mark.setAttribute('aria-label', 'Jump to section ' + (i + 1));
+        mark.addEventListener('click', () => {
+          block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        rail.appendChild(mark);
+      });
+
+      rail.classList.add('visible');
+
+      if (currentRailView) currentRailView.removeEventListener('scroll', onRailScroll);
+      currentRailView = view;
+      view.addEventListener('scroll', onRailScroll);
+      onRailScroll();
+    }
+
+    // ── Research rail — two-level (part / sub) table of contents, built
+    // from data-rail-level / data-rail-title instead of one dot per block.
+    // Separate from buildRail/openProject; shares the same #projRail
+    // element, currentRailView/currentRailBlocks, and onRailScroll. ──
+    function buildResearchRail() {
+      const view = document.getElementById('view-research');
+      currentRailBlocks = Array.from(view.querySelectorAll('.proj-pages .pc-block[data-rail-title]'))
+        .filter(block => {
+          const wrap = block.closest('.research-expand');
+          return !wrap || wrap.classList.contains('open');
+        });
+      const rail = document.getElementById('projRail');
+      rail.innerHTML = '';
+      rail.classList.remove('dark');
+
+      currentRailBlocks.forEach(block => {
+        const level = block.dataset.railLevel;
+        const title = block.dataset.railTitle;
+
+        const mark = document.createElement('button');
+        mark.type = 'button';
+        mark.className = 'proj-rail-mark ' + level;
+        mark.setAttribute('aria-label', title);
+
+        const label = document.createElement('span');
+        label.className = 'rail-label';
+        label.textContent = title;
+        mark.appendChild(label);
+
+        mark.addEventListener('click', () => {
+          // Jumping to a sub-section inside a collapsed part opens it first,
+          // so the rail can always reach what it lists.
+          const wrap = block.closest('.research-expand');
+          if (wrap && !wrap.classList.contains('open')) {
+            const btn = wrap.parentElement.querySelector('.research-toggle');
+            setResearchExpanded(wrap, btn, true);
+          }
+          block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        rail.appendChild(mark);
+      });
+
+      rail.classList.add('visible');
+
+      if (currentRailView) currentRailView.removeEventListener('scroll', onRailScroll);
+      currentRailView = view;
+      view.addEventListener('scroll', onRailScroll);
+      onRailScroll();
+    }
+
+    function hideRail() {
+      const rail = document.getElementById('projRail');
+      rail.classList.remove('visible');
+      rail.innerHTML = '';
+      if (currentRailView) currentRailView.removeEventListener('scroll', onRailScroll);
+      currentRailView = null;
+      currentRailBlocks = [];
+    }
+
+    function onRailScroll() {
+      if (!currentRailView || !currentRailBlocks.length) return;
+      const pos = currentRailView.scrollTop + currentRailView.clientHeight * 0.3;
+      let activeIdx = 0;
+      currentRailBlocks.forEach((block, i) => {
+        if (block.offsetTop <= pos) activeIdx = i;
+      });
+      document.querySelectorAll('#projRail .proj-rail-mark').forEach((mark, i) => {
+        mark.classList.toggle('active', i === activeIdx);
+      });
+    }
+
+    // ── Lightbox — click an image, then browse the whole project with ← → ──
+    let lightboxImages = [];
+    let lightboxIndex = 0;
+
+    function showLightbox(index) {
+      if (!lightboxImages.length) return;
+      lightboxIndex = (index + lightboxImages.length) % lightboxImages.length;
+      const el = lightboxImages[lightboxIndex];
+      const lb = document.getElementById('lightbox');
+      const img = document.getElementById('lightbox-img');
+      img.src = el.src;
+      img.alt = el.alt || '';
+      document.getElementById('lightboxCounter').textContent =
+        lightboxImages.length > 1 ? (lightboxIndex + 1) + ' / ' + lightboxImages.length : '';
+      lb.classList.add('open');
+    }
+
+    function nextLightboxImage() { showLightbox(lightboxIndex + 1); }
+    function prevLightboxImage() { showLightbox(lightboxIndex - 1); }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+    }
+
+    document.getElementById('lightbox').addEventListener('click', function(e) {
+      if (e.target !== document.getElementById('lightbox-img')) closeLightbox();
+    });
+
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('.pc-img-full, .pc-grid-2 img')) {
+        // Inside Research, each part (Surreal Frame / Background) is its own
+        // closed loop — arrow keys never spill into the other part. The four
+        // regular project views have no .research-part, so they still loop
+        // over the whole .proj-view as before.
+        const scope = e.target.closest('.research-part') || e.target.closest('.proj-view');
+        lightboxImages = scope
+          ? Array.from(scope.querySelectorAll('.pc-img-full, .pc-grid-2 img'))
+          : [e.target];
+        showLightbox(lightboxImages.indexOf(e.target));
+      }
+    });
+
+    document.addEventListener('keydown', e => {
+      const lightboxOpen = document.getElementById('lightbox').classList.contains('open');
+
+      if (lightboxOpen) {
+        if (e.key === 'ArrowRight') { e.preventDefault(); nextLightboxImage(); return; }
+        if (e.key === 'ArrowLeft')  { e.preventDefault(); prevLightboxImage(); return; }
+        if (e.key === 'Escape')     { closeLightbox(); return; }
+        return;
+      }
+
+      if (e.key !== 'Escape') return;
+      navigateBack();
+    });
+
+    // ── Research dwell reveal ──
+    // The landing's "ground" (the basement slab + the darkening "Research"
+    // word) rises the longer a visitor dwells on the landing without
+    // engaging the project strip. Purely additive: reads the open/closed
+    // state of the existing views but never mutates them.
+    (function () {
+      // Tuning — adjust freely.
+      const GRACE = 900;      // ms of calm on load before the ground can rise
+      const RISE = 2200;      // ms of continuous dwell to reach full reveal — first time only
+      const FALL = 1400;      // ms to recede once dwelling stops — first time only
+      const FAST = 800;       // ms for every toggle after the first reveal — matches
+                               // the .strip/.seg hover transition, so engaging a
+                               // project and coming back feels like the same UI
+                               // speed, not another slow creep
+      const SLAB_MAX = 96;    // px — how tall the basement slab gets at full reveal
+      const MIN_SLAB_PX = 34; // px — matches .bottom's own height/border line, so
+                               // once it has appeared, hovering a project only
+                               // recedes the slab down to that line instead of
+                               // vanishing it entirely
+      const MIN_P = MIN_SLAB_PX / SLAB_MAX;
+
+      const root = document.documentElement;
+      root.style.setProperty('--slab-max', SLAB_MAX + 'px');
+
+      const researchWord = document.getElementById('researchWord');
+      const researchCue = document.getElementById('researchCue');
+      const basementLabel = document.getElementById('basementLabel');
+      const strip = document.querySelector('.strip');
+
+      const MID_RGB = [138, 129, 120];   // --mid  #8A8178
+      const INK_RGB = [26, 23, 20];      // --ink  #1A1714
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      function researchColor(t) {
+        const r = Math.round(lerp(MID_RGB[0], INK_RGB[0], t));
+        const g = Math.round(lerp(MID_RGB[1], INK_RGB[1], t));
+        const b = Math.round(lerp(MID_RGB[2], INK_RGB[2], t));
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      // Which subtitle words belong to each project. Hovering a segment
+      // pins ALL FOUR subtitle words to this mapping — the relevant ones go
+      // fully ink/opaque (the same look "Research" has at full reveal), the
+      // rest fall to the same faded transparency — overriding the ambient
+      // dwell state entirely for as long as the hover lasts. Architecture /
+      // Barcelona / Los Angeles are wired in CSS (see the .page:has(.seg-*
+      // :hover) rules above); Research is handled here since it's the one
+      // word whose color/opacity are already JS-driven every frame.
+      const WORD_EMPHASIS = {
+        fires:   ['architecture', 'research', 'losangeles'],
+        casa:    ['architecture', 'barcelona'],
+        cantera: ['architecture', 'barcelona'],
+        m3:      ['architecture', 'barcelona'],
+      };
+
+      let hoveredSegId = null;
+      document.querySelectorAll('.seg').forEach(seg => {
+        const id = ['fires', 'casa', 'cantera', 'm3'].find(name => seg.classList.contains('seg-' + name));
+        // Touch has no real hover: a tap still fires pointerenter then
+        // pointerleave right as it lifts, which would otherwise flicker the
+        // per-project word emphasis on every tap. Ignore touch here — only
+        // a genuine pointing device (mouse/trackpad/pen) drives this.
+        seg.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') hoveredSegId = id; });
+        seg.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch' && hoveredSegId === id) hoveredSegId = null; });
+      });
+
+      function applyReveal(p) {
+        root.style.setProperty('--reveal', p.toFixed(4));
+
+        const emphasis = hoveredSegId ? WORD_EMPHASIS[hoveredSegId] : null;
+        let researchT, researchOpacity;
+
+        if (emphasis) {
+          // A project is hovered: Research is either fully on (Fires) or
+          // fully faded (every other project), no in-between, no ambient p.
+          const on = emphasis.includes('research');
+          researchT = on ? 1 : 0;
+          researchOpacity = on ? 1 : 0.1;
+        } else {
+          // Nothing hovered: Research sits fixed at rest, matching Architecture
+          // / Barcelona / Los Angeles exactly — it no longer tracks the ambient
+          // dwell state at all, only the per-project hover emphasis above.
+          researchT = 0;
+          researchOpacity = 1;
+        }
+
+        if (researchWord) {
+          researchWord.style.color = researchColor(researchT);
+          researchWord.style.opacity = researchOpacity.toFixed(3);
+        }
+        if (researchCue) {
+          researchCue.style.opacity = Math.max(0, (researchT - 0.4) / 0.6).toFixed(3);
+        }
+        if (basementLabel) {
+          basementLabel.style.opacity = Math.max(0, (p - 0.55) / 0.45).toFixed(3);
+        }
+      }
+
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReduced) {
+        applyReveal(0.75);
+        return; // no animation loop at all
+      }
+
+      // Same touch/no-real-hover issue as above, but for the strip itself:
+      // without this guard, every tap on a segment (accordion or not) blips
+      // overStrip true→false, making the basement slab dip and spring back
+      // — a visible "bump" — instead of just holding steady.
+      let overStrip = false;
+      if (strip) {
+        strip.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') overStrip = true; });
+        strip.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') overStrip = false; });
+      }
+
+      function blocked() {
+        if (document.querySelector('.proj-view.open')) return true;
+        const about = document.getElementById('aboutOverlay');
+        return !!(about && about.classList.contains('open'));
+      }
+
+      const loadTime = performance.now();
+      let p = 0;
+      let last = loadTime;
+      let hasRevealedOnce = false; // flips true the first time p reaches 1
+      let wasBlocked = false;
+
+      function tick(now) {
+        const dt = now - last;
+        last = now;
+
+        const graceElapsed = (now - loadTime) >= GRACE;
+        const nowBlocked = blocked();
+
+        // Leaving a project (or About) and returning to the home screen: the
+        // ground should just already be there, fully spread, the instant
+        // we're back — even if the slow first-load reveal never finished
+        // before the visitor navigated away. So this snaps every time,
+        // not only once the ground has fully appeared at least once.
+        if (wasBlocked && !nowBlocked) {
+          p = 1;
+          hasRevealedOnce = true;
+        }
+        wasBlocked = nowBlocked;
+
+        // Grace only guards the very first ambient rise on a fresh load; once
+        // the ground has ever been shown (including a just-snapped return),
+        // it should never be re-gated by that initial calm-down window.
+        const shouldRise = (graceElapsed || hasRevealedOnce) && !overStrip && !nowBlocked;
+
+        // Only the very first reveal creeps in slowly. After that, every
+        // toggle (leaving the strip, closing a project) snaps at the same
+        // speed as the strip's own hover transition.
+        const riseMs = hasRevealedOnce ? FAST : RISE;
+        const fallMs = hasRevealedOnce ? FAST : FALL;
+
+        // Once it has appeared at least once, receding never goes all the
+        // way to nothing — it settles at the line above "© 2025" instead.
+        const floor = hasRevealedOnce ? MIN_P : 0;
+
+        p = shouldRise
+          ? Math.min(1, p + dt / riseMs)
+          : Math.max(floor, p - dt / fallMs);
+
+        if (p >= 1) hasRevealedOnce = true;
+
+        applyReveal(p);
+        requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+    })();
+  </script>
+
+</body>
+</html>

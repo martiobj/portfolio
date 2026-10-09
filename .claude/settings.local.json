@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(identify \"/Users/marti/Documents/martinet/portfolio/website/LACasa/imatges/2-2.png\")",
+      "Bash(sips -g pixelHeight -g pixelWidth \"/Users/marti/Documents/martinet/portfolio/website/LACasa/imatges/2-2.png\")"
+    ]
+  }
+}
